@@ -3,3 +3,6 @@
 *.vcxproj*
 /microsha/Debug/
 /microsha/.vs/
+
+#Хз что это
+*desktop.ini
