@@ -1,3 +1,5 @@
+#игнорировние файлов, связанных с Visual Studio
 *.sln
 *.vcxproj*
 /microsha/Debug/
+/microsha/.vs/
