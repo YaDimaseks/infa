@@ -8,9 +8,19 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <pwd.h>
 
 
 using namespace std;
+
+string get_homedir() {
+    const char *dir;
+    if ((dir = getenv("HOME")) == NULL) {
+        dir = getpwuid(getuid())->pw_dir;
+    }
+    string ret = dir;
+    return ret;
+}
 
 vector<string> parsing(string s, const string& delimeters){
     vector<string> ans;
@@ -29,31 +39,35 @@ vector<string> parsing(string s, const string& delimeters){
     return ans;
 }
 
+
+
 int main() {
-    pid_t pid_main; //PID of the process
+    //pid_t pid_main; //PID of the process
 
 
-    string in;
-    printf(">");
-    while (getline(cin, in)) {
-        int fd[2];
-        pipe(fd);
-        pid_t pid = fork();
-        if (pid != 0) {
-            close(fd[0]);
-            dup2(fd[1], 1);
-        }
-        else {
+    //string in;
+    //printf(">");
+    //while (getline(cin, in)) {
+    //    int fd[2];
+    //    pipe(fd);
+    //    pid_t pid = fork();
+    //    if (pid != 0) {
+    //        close(fd[0]);
+    //        dup2(fd[1], 1);
+    //    }
+    //    else {
 
-        }
+    //    }
 
-        //парсинг строки по пробелу и табуляции
-        vector<string> v = parsing(in, " \t");
+    //    //парсинг строки по пробелу и табуляции
+    //    vector<string> v = parsing(in, " \t");
 
-        for (auto a : v) {
-            cout << a << "\n";
-        }
-        printf(">");
-    }
+    //    for (auto a : v) {
+    //        cout << a << "\n";
+    //    }
+    //    printf(">");
+    //}
+
+    printf("%s", get_homedir());
 
 }
