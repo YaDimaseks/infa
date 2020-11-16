@@ -88,7 +88,6 @@ public:
     //общий вид: command <(>) file1 >(<) file2 
     vector<string> input_args;
     vector<string> command_args;
-    //vector<pair<string, bool>> files; //пары файл-флаг, где флаг=0 если input, 1 если output
     string input_name;
     string output_name;
     Command(const string& input) {
@@ -104,6 +103,7 @@ public:
         cout << endl;
     }
     int exec() {
+        if (failed) return 1;
         if (is_empty()) {
             perror("Command is empty");
         }
@@ -130,20 +130,22 @@ public:
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
     bool redirect = true;
+    bool failed = false;
     void parsing_input(string input) { input_args = parsing(input, " \t"); }
-    void command_split() { //split команды на command_args и files
+    void command_split() { //split команды на command_args, input_name и output_name
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
         auto out_iter = find(input_args.begin(), input_args.end(), ">");
         auto out_counter = count(input_args.begin(), input_args.end(), ">");
-        try {
-            if (in_counter > 1)
-                throw '<';
-            if (out_counter > 1)
-                throw '>';
+        if (in_counter > 1) {
+            perror("too many '<'");
+            failed = true;
+            return;
         }
-        catch (char a) {
-            cerr << "Too many " << a << endl;
+        if (out_counter > 1) {
+            perror("Too many '>'");
+            failed = true;
+            return;
         }
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
@@ -187,12 +189,13 @@ private:
         for (int i = 0; v[i] != NULL; i++) {
             printf("v[%d]='%s'\n", i, v[i]);
         }
-	prctl(PR_SET_PDEATHSIG, SIGINT);
+	    prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
+        perror(v[0]);
     }
     int do_redirect() {
         if (!redirect) return 0;
-        int fd_in, fo_out;
+        int fd_in, fd_out;
         if (!input_name.empty()) {
             fd_in = open(input_name.c_str(), O_RDONLY);
             if (fd_in == -1) {
@@ -202,7 +205,7 @@ private:
             dup2(fd_in, STDIN_FILENO);
         }
         if (!output_name.empty()) {
-            fd_out = open(output_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IWRITE);
+            fd_out = open(output_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IWRITE | S_IREAD);
             if (fd_out == -1) {
                 perror("Can't open output file");
                 return 1;
@@ -212,37 +215,96 @@ private:
     }
 };
 
+class Conveyer {
+public:
+    // command1 < file1 | command2 | ... | commandn > file2
+    vector<Command> commands;
+    string input_name;
+    string output_name;
+    Conveyer(const string& input) {
+        vector<string> parsed = parsing(input, "|");
+        vector<Command> data;
+        for (auto i : parsed)
+            commands.push_back(i);
+        if (commands.size() > 1) {
+            for (auto i = commands.begin(); i != commands.end(); i++) {
+                if (!commands[0].output_name.empty() && !(i == commands.end() - 1)) {
+                    perror("'>' can only be use in last conponent of conveyer");
+                    exit(1);
+                }
+                if (!commands[0].input_name.empty() && !(i == commands.begin())) {
+                    perror("'<' can only be use in first conponent of conveyer");
+                    exit(1);
+                }
+            }
+        }
+        input_name = commands.front().input_name;
+        output_name = commands.back().output_name;
+        //fd_in = dup(STDIN_FILENO);
+        //fd_out = dup(STDOUT_FILENO);
+    }
+    ~Conveyer() {}
+    int exec() {
+        if (commands.empty() || commands[0].is_empty()) return 0;
+        if (commands[0].is_time()) {}
+        else if (commands.size() == 1) {
+            commands[0].exec();
+            return 0;
+        }
+        int cur_fd = 0, prev_fd = -1;
+        vector<int[2]> pipes(commands.size() - 1);
+        for (auto& fd : pipes) {
+            if (pipe2(fd, O_CLOEXEC) != 0) {
+                perror("Can't open pipe\n");
+            }
+        }
+        for (int i = 0; i != commands.size(); i++, cur_fd++, prev_fd++) {
+            pid_t pid = fork();
+            if (pid == 0) {
+                if (i == 0) {
+                    dup2(pipes[0][1], STDOUT_FILENO);
+                    close(pipes[0][0]);
+                    commands[i].exec();
+                }
+                else if (i > 0 && i < commands.size() - 1) {
+                    dup2(pipes[prev_fd][0], STDIN_FILENO);
+                    close(pipes[prev_fd][1]);
+                    dup2(pipes[cur_fd][1], STDOUT_FILENO);
+                    close(pipes[cur_fd][0]);
+                    commands[i].exec();
+                }
+                else if (i == commands.size() - 1) {
+                    dup2(pipes[prev_fd][0], STDIN_FILENO);
+                    close(pipes[prev_fd][1]);
+                    commands[i].exec();
+                }
+            }
+            else {
+                if (i == commands.size() - 1) {//на последней команде закрываем все пайпы и ждем детей
+                    for (auto& i : pipes) {
+                        if (i[0] != -1) {
+                            close(i[0]);
+                            close(i[1]);
+                        }
+                    }
+                    for (int i = 0; i < commands.size(); i++) {
+                        wait(NULL);
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+private:
+    //int fd_in, fd_out;
+};
+
 int main() {
     string input;
 	while(true){
 		print_hello();
 		getline(cin, input);
-		cout << endl;
-		Command command(input);
-		command.exec();
+        Conveyer conveyer(input);
+        conveyer.exec();
 	}
-    
-    //pid_t pid_main; //PID of the process
-    //string in;
-    //printf(">");
-    //while (getline(cin, in)) {
-    //    int fd[2];
-    //    pipe(fd);
-    //    pid_t pid = fork();
-    //    if (pid != 0) {
-    //        close(fd[0]);
-    //        dup2(fd[1], 1);
-    //    }
-    //    else {
-
-    //    }
-
-    //    //парсинг строки по пробелу и табул€ции
-    //    vector<string> v = parsing(in, " \t");
-
-    //    for (auto a : v) {
-    //        cout << a << "\n";
-    //    }
-    //    printf(">");
-    //}
 }
