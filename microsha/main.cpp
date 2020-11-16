@@ -53,7 +53,7 @@ void print_hello(){
     if (dir == "/root")
 	    dir = "";
     if(dir > get_homedir()){
-        vector<string> dir_vec = parsing(wd, "/");
+        vector<string> dir_vec = parsing(dir, "/");
 	hello += "~/";
 	for (size_t i = 2; i < dir_vec.size(); i++){
             hello += dir_vec[i];
@@ -65,7 +65,7 @@ void print_hello(){
         hello += "~";
     }
     else{
-        vector<string> dir_vec = parsing(wd, "/");
+        vector<string> dir_vec = parsing(dir, "/");
 	hello += "/";
 	for (size_t i = 0; i < dir_vec.size(); i++){
 		hello += dir_vec[i];
@@ -95,16 +95,15 @@ public:
     {
         for (auto& arg : input_args)
         {
-            cout << cout.width(2) << arg;
+            cout << arg << "    ";
         }
         cout << endl;
     }
     int exec() {
         if (is_empty()) {
             perror("Command is empty");
-            return 0;
         }
-        if (is_cd()) {
+	else if (is_cd()) {
             if (command_args.size() == 1)
                 exec_cd(get_homedir());
             else if (command_args.size() == 2)
@@ -112,12 +111,13 @@ public:
             else
                 perror("Too many arguments for command 'cd'");
         }
-        if (is_pwd()) {
+	else if (is_pwd()) {
             exec_pwd();
         }
         else {
             exec_bash_command(command_args);
         }
+	return 0;
     }
     bool is_empty() { return command_args.empty(); }
     bool is_cd() { return is_empty() ? false : command_args[0] == "cd"; }
@@ -158,7 +158,6 @@ private:
     void exec_pwd()
     {
         cout << get_dir() << endl;
-        exit(0);
     }
     void exec_cd(const string& arg)
     {
@@ -183,19 +182,16 @@ private:
 };
 
 int main() {
-	print_hello();
 	string input;
-
-    while (!getline(cin, input)) {
-        vector<string> v = parsing(input, " \t");
-        for (auto a : v) {
-            cout << a << "\n";
-        }
-    }
-    cout << endl;
-    Command command(input);
-    command.exec();
-    //pid_t pid_main; //PID of the process
+	while(true){
+		print_hello();
+		getline(cin,input);
+		Command command(input);
+		//command.print();
+		command.exec();
+	}
+	
+	//pid_t pid_main; //PID of the process
     //string in;
     //printf(">");
     //while (getline(cin, in)) {
