@@ -40,10 +40,15 @@ string get_homedir() {
     return ret;
 }
 
-void print_hello(){
+string get_dir() {
     char wd[1000];
     getcwd(wd, sizeof(wd));
     string dir = wd;
+    return dir;
+}
+
+void print_hello(){
+    string dir = get_dir();
     string hello;
     if (dir == "/root")
 	    dir = "";
@@ -78,20 +83,109 @@ void print_hello(){
 
 class Command{
 public:
-	vector<string> args;
-	Command(const string* input){}
+    //общий вид: command <(>) file1 >(<) file2 
+	vector<string> input_args;
+    vector<string> command_args;
+    vector<pair<string, bool>> files; //пары файл-флаг, где флаг=0 если input, 1 если output
+	Command(const string& input){
+        parsing_input(input);
+        command_split();
+    }
+    void print()
+    {
+        for (auto& arg : input_args)
+        {
+            cout << cout.width(2) << arg;
+        }
+        cout << endl;
+    }
+    int exec() {
+        if (is_empty()) {
+            perror("Command is empty");
+            return 0;
+        }
+        if (is_cd()) {
+            if (command_args.size() == 1)
+                exec_cd(get_homedir());
+            else if (command_args.size() == 2)
+                exec_cd(command_args[1]);
+            else
+                perror("Too many arguments for command 'cd'");
+        }
+        if (is_pwd()) {
+            exec_pwd();
+        }
+        else {
+            exec_bash_command(command_args);
+        }
+    }
+    bool is_empty() { return command_args.empty(); }
+    bool is_cd() { return is_empty() ? false : command_args[0] == "cd"; }
+    bool is_time() { return is_empty() ? false : command_args[0] == "time"; }
+    bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
-
+    void parsing_input(string input) {
+        input_args = parsing(input, " \t");
+    }
+    void command_split() { //split команды на command_args и files
+        auto in_iter = find(input_args.begin(), input_args.end(), "<");
+        auto in_counter = count(input_args.begin(), input_args.end(), "<");
+        auto out_iter = find(input_args.begin(), input_args.end(), ">");
+        auto out_counter = count(input_args.begin(), input_args.end(), ">");
+        try {
+            if (in_counter > 1)
+                throw '<';
+            if (out_counter > 1)
+                throw '>';
+        }
+        catch (char a) {
+            cerr << "Too many " << a << endl;
+        }
+        if (in_iter > out_iter) {
+            command_args.assign(input_args.begin(), out_iter);
+            files.push_back(make_pair(*(out_iter + 1), 1));
+            if (in_iter != input_args.end())
+                files.push_back(make_pair(*(in_iter + 1), 0));
+        }
+        else if (out_iter > in_iter) {
+            command_args.assign(input_args.begin(), in_iter);
+            files.push_back(make_pair(*(in_iter + 1), 0));
+            if (out_iter != input_args.end())
+                files.push_back(make_pair(*(out_iter + 1), 1));
+        }
+        else {
+            command_args = input_args;
+        }
+    }
+    void exec_pwd()
+    {
+        cout << get_dir() << endl;
+        exit(0);
+    }
+    void exec_cd(const string& arg)
+    {
+        int code = chdir(arg.c_str());
+        if (code == -1)
+        {
+            cerr << "No such file or directory" << endl;
+        }
+    }
+    void exec_bash_command(vector<string> command_args) {}
 };
 
 int main() {
 	print_hello();
 	string input;
-	getline(cin, input);
-	vector<string> v = parsing(input, " \t");
-	for (auto a : v) {
-		cout << a << "\n";
-    	}
+
+    while (!getline(cin, input)) {
+        vector<string> v = parsing(input, " \t");
+        for (auto a : v) {
+            cout << a << "\n";
+        }
+    }
+    cout << endl;
+    Command command(input);
+    command.exec();
     //pid_t pid_main; //PID of the process
     //string in;
     //printf(">");
