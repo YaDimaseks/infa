@@ -3,6 +3,8 @@
 #include <csignal>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <fstream>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/prctl.h>
@@ -104,10 +106,11 @@ public:
         cout << endl;
     }
     int exec() {
+	if (failed) return 1;
         if (is_empty()) {
             perror("Command is empty");
         }
-        if (is_cd()) {
+	else if (is_cd()) {
             if (command_args.size() == 1)
                 exec_cd(get_homedir());
             else if (command_args.size() == 2)
@@ -115,7 +118,7 @@ public:
             else
                 perror("Too many arguments for command 'cd'");
         }
-        if (is_pwd()) {
+	else if (is_pwd()) {
             exec_pwd();
         }
         else {
@@ -130,21 +133,23 @@ public:
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
     bool redirect = true;
+    bool failed = false;
     void parsing_input(string input) { input_args = parsing(input, " \t"); }
     void command_split() { //split команды на command_args и files
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
         auto out_iter = find(input_args.begin(), input_args.end(), ">");
         auto out_counter = count(input_args.begin(), input_args.end(), ">");
-        try {
-            if (in_counter > 1)
-                throw '<';
-            if (out_counter > 1)
-                throw '>';
-        }
-        catch (char a) {
-            cerr << "Too many " << a << endl;
-        }
+        if (in_counter > 1){
+                perror("too many '<'");
+		failed = true;
+		return;
+	}
+        if (out_counter > 1){
+        	perror("Too many '>'");
+		failed = true;
+		return;
+	}
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
             //files.push_back(make_pair(*(out_iter + 1), 1));
@@ -184,15 +189,13 @@ private:
             v.push_back((char*)command_args[i].c_str());
         }
         v.push_back(NULL);
-        for (int i = 0; v[i] != NULL; i++) {
-            printf("v[%d]='%s'\n", i, v[i]);
-        }
 	prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
+	perror(v[0]);
     }
     int do_redirect() {
         if (!redirect) return 0;
-        int fd_in, fo_out;
+        int fd_in, fd_out;
         if (!input_name.empty()) {
             fd_in = open(input_name.c_str(), O_RDONLY);
             if (fd_in == -1) {
@@ -202,13 +205,14 @@ private:
             dup2(fd_in, STDIN_FILENO);
         }
         if (!output_name.empty()) {
-            fd_out = open(output_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IWRITE);
+            fd_out = open(output_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IWRITE | S_IREAD);
             if (fd_out == -1) {
                 perror("Can't open output file");
                 return 1;
             }
             dup2(fd_out, STDOUT_FILENO);
         }
+	return 0;
     }
 };
 
@@ -217,7 +221,6 @@ int main() {
 	while(true){
 		print_hello();
 		getline(cin, input);
-		cout << endl;
 		Command command(input);
 		command.exec();
 	}
