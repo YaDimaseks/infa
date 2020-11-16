@@ -124,9 +124,7 @@ public:
     bool is_time() { return is_empty() ? false : command_args[0] == "time"; }
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
-    void parsing_input(string input) {
-        input_args = parsing(input, " \t");
-    }
+    void parsing_input(string input) {input_args = parsing(input, " \t");}
     void command_split() { //split команды на command_args и files
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
@@ -170,7 +168,18 @@ private:
             cerr << "No such file or directory" << endl;
         }
     }
-    void exec_bash_command(vector<string> command_args) {}
+    void exec_bash_command(const vector<string>& command_args) {
+        vector<char*> v;
+        for (size_t i = 0; i < command_args.size(); i++) {
+            v.push_back((char*)command_args[i].c_str());
+        }
+        v.push_back(NULL);
+        for (int i = 0; v[i] != NULL; i++) {
+            printf("v[%d]='%s'\n", i, v[i]);
+        }
+        execvp(v[0], &v[0]);
+        perror(v[0]);
+    }
 };
 
 int main() {
