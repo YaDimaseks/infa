@@ -88,7 +88,9 @@ public:
     //общий вид: command <(>) file1 >(<) file2 
     vector<string> input_args;
     vector<string> command_args;
-    vector<pair<string, bool>> files; //пары файл-флаг, где флаг=0 если input, 1 если output
+    //vector<pair<string, bool>> files; //пары файл-флаг, где флаг=0 если input, 1 если output
+    string input_name;
+    string output_name;
     Command(const string& input) {
         parsing_input(input);
         command_split();
@@ -117,6 +119,7 @@ public:
             exec_pwd();
         }
         else {
+            do_redirect();
             exec_bash_command(command_args);
         }
 	return 0;
@@ -126,6 +129,7 @@ public:
     bool is_time() { return is_empty() ? false : command_args[0] == "time"; }
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
+    bool redirect = true;
     void parsing_input(string input) { input_args = parsing(input, " \t"); }
     void command_split() { //split команды на command_args и files
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
@@ -143,18 +147,23 @@ private:
         }
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
-            files.push_back(make_pair(*(out_iter + 1), 1));
+            //files.push_back(make_pair(*(out_iter + 1), 1));
+            output_name = *(out_iter + 1);
             if (in_iter != input_args.end())
-                files.push_back(make_pair(*(in_iter + 1), 0));
+                //files.push_back(make_pair(*(in_iter + 1), 0));
+                input_name = *(in_iter + 1);
         }
         else if (out_iter > in_iter) {
             command_args.assign(input_args.begin(), in_iter);
-            files.push_back(make_pair(*(in_iter + 1), 0));
+            //files.push_back(make_pair(*(in_iter + 1), 0));
+            input_name = *(in_iter + 1);
             if (out_iter != input_args.end())
-                files.push_back(make_pair(*(out_iter + 1), 1));
+                //files.push_back(make_pair(*(out_iter + 1), 1));
+                output_name = *(out_iter + 1);
         }
         else {
             command_args = input_args;
+            redirect = false;
         }
     }
     void exec_pwd()
@@ -180,6 +189,26 @@ private:
         }
 	prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
+    }
+    int do_redirect() {
+        if (!redirect) return 0;
+        int fd_in, fo_out;
+        if (!input_name.empty()) {
+            fd_in = open(input_name.c_str(), O_RDONLY);
+            if (fd_in == -1) {
+                perror("Can't open input file");
+                return 1;
+            }
+            dup2(fd_in, STDIN_FILENO);
+        }
+        if (!output_name.empty()) {
+            fd_out = open(output_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IWRITE);
+            if (fd_out == -1) {
+                perror("Can't open output file");
+                return 1;
+            }
+            dup2(fd_out, STDOUT_FILENO);
+        }
     }
 };
 
