@@ -14,25 +14,41 @@
 #include <iostream>
 #include <sstream>
 #include <pwd.h>
-
+#include <wait.h>
 
 using namespace std;
 
-vector<string> parsing(string s, const string& delimeters) {
-    vector<string> ans;
-    for (string::iterator iter = s.begin(); iter != s.end(); iter++) {
-        if (delimeters.find(*iter) != std::string::npos) {
-            *iter = '\n';
-        }
-    }
-    istringstream ist(s);
-    while (getline(ist, s)) {
-        istringstream tmp(s);
-        string token;
-        tmp >> token;
-        if (token != "") ans.push_back(token);
-    }
-    return ans;
+vector<string> parsing(string s) {
+	istringstream ist(s);
+	vector<string> ans;
+	while(ist){
+		string token;
+		ist >> token;
+		if (token != "") ans.push_back(token);
+	}
+	//cout << "parsing" << endl;
+	//for (int i = 0; i < ans.size(); i++){
+	//	cout << ans[i] << endl;
+	//}
+	//cout << "end parsing" << endl;
+
+	return ans;
+}
+
+vector<string> parsing_by_string(const string& str, const string& delim)
+{
+	vector<string> tokens;
+	size_t prev = 0, pos = 0;
+	do
+	{
+		pos = str.find(delim, prev);
+		if (pos == string::npos) pos = str.length();
+		string token = str.substr(prev, pos-prev);
+		if (!token.empty()) tokens.push_back(token);
+		prev = pos + delim.length();
+	}
+	while (pos < str.length() && prev < str.length());
+	return tokens;
 }
 
 string get_homedir() {
@@ -57,7 +73,7 @@ void print_hello() {
     if (dir == "/root")
         dir = "";
     if (dir > get_homedir()) {
-        vector<string> dir_vec = parsing(dir, "/");
+        vector<string> dir_vec = parsing_by_string(dir, "/");
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -69,7 +85,7 @@ void print_hello() {
         hello += "~";
     }
     else {
-        vector<string> dir_vec = parsing(dir, "/");
+        vector<string> dir_vec = parsing_by_string(dir, "/");
         hello += "/";
         for (size_t i = 0; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -105,11 +121,8 @@ public:
         cout << endl;
     }
     int exec() {
-<<<<<<< HEAD
         if (failed) return 1;
-=======
 	if (failed) return 1;
->>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
         if (is_empty()) {
             perror("Command is empty");
         }
@@ -137,13 +150,12 @@ public:
 private:
     bool redirect = true;
     bool failed = false;
-    void parsing_input(string input) { input_args = parsing(input, " \t"); }
+    void parsing_input(string input) { input_args = parsing(input); }
     void command_split() { //split команды на command_args, input_name и output_name
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
         auto out_iter = find(input_args.begin(), input_args.end(), ">");
         auto out_counter = count(input_args.begin(), input_args.end(), ">");
-<<<<<<< HEAD
         if (in_counter > 1) {
             perror("too many '<'");
             failed = true;
@@ -154,7 +166,6 @@ private:
             failed = true;
             return;
         }
-=======
         if (in_counter > 1){
                 perror("too many '<'");
 		failed = true;
@@ -165,7 +176,6 @@ private:
 		failed = true;
 		return;
 	}
->>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
             //files.push_back(make_pair(*(out_iter + 1), 1));
@@ -205,18 +215,15 @@ private:
             v.push_back((char*)command_args[i].c_str());
         }
         v.push_back(NULL);
-<<<<<<< HEAD
-        for (int i = 0; v[i] != NULL; i++) {
-            printf("v[%d]='%s'\n", i, v[i]);
-        }
+        //for (int i = 0; v[i] != NULL; i++) {
+        //    printf("v[%d]='%s'\n", i, v[i]);
+        //}
 	    prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
         perror(v[0]);
-=======
 	prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
 	perror(v[0]);
->>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
     }
     int do_redirect() {
         if (!redirect) return 0;
@@ -248,17 +255,20 @@ public:
     string input_name;
     string output_name;
     Conveyer(const string& input) {
-        vector<string> parsed = parsing(input, "|");
-        vector<Command> data;
+        vector<string> parsed = parsing_by_string(input, "|");
+        //for (int i = 0; i < parsed.size();i++){
+	//	cout << parsed[i] << endl;
+	//}
+	vector<Command> data;
         for (auto i : parsed)
             commands.push_back(i);
         if (commands.size() > 1) {
-            for (auto i = commands.begin(); i != commands.end(); i++) {
-                if (!commands[0].output_name.empty() && !(i == commands.end() - 1)) {
+            for (int i = 0; i != commands.size() - 1; i++) {
+                if (!commands[i].output_name.empty() && !(i == commands.size() - 1)) {
                     perror("'>' can only be use in last conponent of conveyer");
                     exit(1);
                 }
-                if (!commands[0].input_name.empty() && !(i == commands.begin())) {
+                if (!commands[i].input_name.empty() && !(i == 0)) {
                     perror("'<' can only be use in first conponent of conveyer");
                     exit(1);
                 }
@@ -330,12 +340,7 @@ int main() {
 	while(true){
 		print_hello();
 		getline(cin, input);
-<<<<<<< HEAD
-        Conveyer conveyer(input);
-        conveyer.exec();
-=======
-		Command command(input);
-		command.exec();
->>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
+		Conveyer conveyer(input);
+        	conveyer.exec();
 	}
 }
