@@ -3,6 +3,8 @@
 #include <csignal>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <fstream>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/prctl.h>
@@ -103,11 +105,15 @@ public:
         cout << endl;
     }
     int exec() {
+<<<<<<< HEAD
         if (failed) return 1;
+=======
+	if (failed) return 1;
+>>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
         if (is_empty()) {
             perror("Command is empty");
         }
-        if (is_cd()) {
+	else if (is_cd()) {
             if (command_args.size() == 1)
                 exec_cd(get_homedir());
             else if (command_args.size() == 2)
@@ -115,7 +121,7 @@ public:
             else
                 perror("Too many arguments for command 'cd'");
         }
-        if (is_pwd()) {
+	else if (is_pwd()) {
             exec_pwd();
         }
         else {
@@ -137,6 +143,7 @@ private:
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
         auto out_iter = find(input_args.begin(), input_args.end(), ">");
         auto out_counter = count(input_args.begin(), input_args.end(), ">");
+<<<<<<< HEAD
         if (in_counter > 1) {
             perror("too many '<'");
             failed = true;
@@ -147,6 +154,18 @@ private:
             failed = true;
             return;
         }
+=======
+        if (in_counter > 1){
+                perror("too many '<'");
+		failed = true;
+		return;
+	}
+        if (out_counter > 1){
+        	perror("Too many '>'");
+		failed = true;
+		return;
+	}
+>>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
             //files.push_back(make_pair(*(out_iter + 1), 1));
@@ -186,12 +205,18 @@ private:
             v.push_back((char*)command_args[i].c_str());
         }
         v.push_back(NULL);
+<<<<<<< HEAD
         for (int i = 0; v[i] != NULL; i++) {
             printf("v[%d]='%s'\n", i, v[i]);
         }
 	    prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
         perror(v[0]);
+=======
+	prctl(PR_SET_PDEATHSIG, SIGINT);
+        execvp(v[0], &v[0]);
+	perror(v[0]);
+>>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
     }
     int do_redirect() {
         if (!redirect) return 0;
@@ -212,6 +237,7 @@ private:
             }
             dup2(fd_out, STDOUT_FILENO);
         }
+	return 0;
     }
 };
 
@@ -304,7 +330,12 @@ int main() {
 	while(true){
 		print_hello();
 		getline(cin, input);
+<<<<<<< HEAD
         Conveyer conveyer(input);
         conveyer.exec();
+=======
+		Command command(input);
+		command.exec();
+>>>>>>> 212c9efc5a90867fc207bff9b68b98ba5a54eefe
 	}
 }
