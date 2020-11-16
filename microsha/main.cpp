@@ -1,9 +1,11 @@
 #include <stdio.h>
 //#include <process.h>
+#include <csignal>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/prctl.h>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -53,7 +55,7 @@ void print_hello() {
     if (dir == "/root")
         dir = "";
     if (dir > get_homedir()) {
-        vector<string> dir_vec = parsing(wd, "/");
+        vector<string> dir_vec = parsing(dir, "/");
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -65,7 +67,7 @@ void print_hello() {
         hello += "~";
     }
     else {
-        vector<string> dir_vec = parsing(wd, "/");
+        vector<string> dir_vec = parsing(dir, "/");
         hello += "/";
         for (size_t i = 0; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -102,7 +104,6 @@ public:
     int exec() {
         if (is_empty()) {
             perror("Command is empty");
-            return 0;
         }
         if (is_cd()) {
             if (command_args.size() == 1)
@@ -118,6 +119,7 @@ public:
         else {
             exec_bash_command(command_args);
         }
+	return 0;
     }
     bool is_empty() { return command_args.empty(); }
     bool is_cd() { return is_empty() ? false : command_args[0] == "cd"; }
@@ -158,7 +160,6 @@ private:
     void exec_pwd()
     {
         cout << get_dir() << endl;
-        exit(0);
     }
     void exec_cd(const string& arg)
     {
@@ -177,24 +178,21 @@ private:
         for (int i = 0; v[i] != NULL; i++) {
             printf("v[%d]='%s'\n", i, v[i]);
         }
+	prctl(PR_SET_PDEATHSIG, SIGINT);
         execvp(v[0], &v[0]);
-        perror(v[0]);
     }
 };
 
 int main() {
-    print_hello();
     string input;
-
-    while (!getline(cin, input)) {
-        vector<string> v = parsing(input, " \t");
-        for (auto a : v) {
-            cout << a << "\n";
-        }
-    }
-    cout << endl;
-    Command command(input);
-    command.exec();
+	while(true){
+		print_hello();
+		getline(cin, input);
+		cout << endl;
+		Command command(input);
+		command.exec();
+	}
+    
     //pid_t pid_main; //PID of the process
     //string in;
     //printf(">");
