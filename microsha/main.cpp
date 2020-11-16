@@ -14,7 +14,7 @@
 
 using namespace std;
 
-vector<string> parsing(string s, const string& delimeters){
+vector<string> parsing(string s, const string& delimeters) {
     vector<string> ans;
     for (string::iterator iter = s.begin(); iter != s.end(); iter++) {
         if (delimeters.find(*iter) != std::string::npos) {
@@ -23,7 +23,7 @@ vector<string> parsing(string s, const string& delimeters){
     }
     istringstream ist(s);
     while (getline(ist, s)) {
-	istringstream tmp(s);
+        istringstream tmp(s);
         string token;
         tmp >> token;
         if (token != "") ans.push_back(token);
@@ -32,7 +32,7 @@ vector<string> parsing(string s, const string& delimeters){
 }
 
 string get_homedir() {
-    const char *dir;
+    const char* dir;
     if ((dir = getenv("HOME")) == NULL) {
         dir = getpwuid(getuid())->pw_dir;
     }
@@ -47,31 +47,31 @@ string get_dir() {
     return dir;
 }
 
-void print_hello(){
+void print_hello() {
     string dir = get_dir();
     string hello;
     if (dir == "/root")
-	    dir = "";
-    if(dir > get_homedir()){
-        vector<string> dir_vec = parsing(dir, "/");
-	hello += "~/";
-	for (size_t i = 2; i < dir_vec.size(); i++){
+        dir = "";
+    if (dir > get_homedir()) {
+        vector<string> dir_vec = parsing(wd, "/");
+        hello += "~/";
+        for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
-	    if (i != dir_vec.size() - 1)
-		hello += "/";
-	}
-    }				    
-    else if(dir == get_homedir()){
+            if (i != dir_vec.size() - 1)
+                hello += "/";
+        }
+    }
+    else if (dir == get_homedir()) {
         hello += "~";
     }
-    else{
-        vector<string> dir_vec = parsing(dir, "/");
-	hello += "/";
-	for (size_t i = 0; i < dir_vec.size(); i++){
-		hello += dir_vec[i];
-	if (i != dir_vec.size() - 1)
- 		hello += "/";
-	}
+    else {
+        vector<string> dir_vec = parsing(wd, "/");
+        hello += "/";
+        for (size_t i = 0; i < dir_vec.size(); i++) {
+            hello += dir_vec[i];
+            if (i != dir_vec.size() - 1)
+                hello += "/";
+        }
     }
     gid_t gid = getgid();
     if (long(gid) == 0)
@@ -81,13 +81,13 @@ void print_hello(){
     cout << hello;
 }
 
-class Command{
+class Command {
 public:
     //общий вид: command <(>) file1 >(<) file2 
-	vector<string> input_args;
+    vector<string> input_args;
     vector<string> command_args;
     vector<pair<string, bool>> files; //пары файл-флаг, где флаг=0 если input, 1 если output
-	Command(const string& input){
+    Command(const string& input) {
         parsing_input(input);
         command_split();
     }
@@ -95,15 +95,16 @@ public:
     {
         for (auto& arg : input_args)
         {
-            cout << arg << "    ";
+            cout << cout.width(2) << arg;
         }
         cout << endl;
     }
     int exec() {
         if (is_empty()) {
             perror("Command is empty");
+            return 0;
         }
-	else if (is_cd()) {
+        if (is_cd()) {
             if (command_args.size() == 1)
                 exec_cd(get_homedir());
             else if (command_args.size() == 2)
@@ -111,20 +112,19 @@ public:
             else
                 perror("Too many arguments for command 'cd'");
         }
-	else if (is_pwd()) {
+        if (is_pwd()) {
             exec_pwd();
         }
         else {
             exec_bash_command(command_args);
         }
-	return 0;
     }
     bool is_empty() { return command_args.empty(); }
     bool is_cd() { return is_empty() ? false : command_args[0] == "cd"; }
     bool is_time() { return is_empty() ? false : command_args[0] == "time"; }
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
-    void parsing_input(string input) {input_args = parsing(input, " \t");}
+    void parsing_input(string input) { input_args = parsing(input, " \t"); }
     void command_split() { //split команды на command_args и files
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
@@ -158,6 +158,7 @@ private:
     void exec_pwd()
     {
         cout << get_dir() << endl;
+        exit(0);
     }
     void exec_cd(const string& arg)
     {
@@ -182,16 +183,19 @@ private:
 };
 
 int main() {
-	string input;
-	while(true){
-		print_hello();
-		getline(cin,input);
-		Command command(input);
-		//command.print();
-		command.exec();
-	}
-	
-	//pid_t pid_main; //PID of the process
+    print_hello();
+    string input;
+
+    while (!getline(cin, input)) {
+        vector<string> v = parsing(input, " \t");
+        for (auto a : v) {
+            cout << a << "\n";
+        }
+    }
+    cout << endl;
+    Command command(input);
+    command.exec();
+    //pid_t pid_main; //PID of the process
     //string in;
     //printf(">");
     //while (getline(cin, in)) {
