@@ -36,7 +36,7 @@ vector<string> parsing(string s) {
 	return ans;
 }
 
-vector<string> parsing_by_string_shit(const string& str, const string& delim)
+vector<string> parsing_by_string(const string& str, const string& delim)
 {
 	vector<string> tokens;
 	size_t prev = 0, pos = 0;
@@ -45,29 +45,11 @@ vector<string> parsing_by_string_shit(const string& str, const string& delim)
 		pos = str.find(delim, prev);
 		if (pos == string::npos) pos = str.length();
 		string token = str.substr(prev, pos-prev);
-		if (!token.empty()) tokens.push_back(token);
+		tokens.push_back(token);
 		prev = pos + delim.length();
 	}
 	while (pos < str.length() && prev < str.length());
 	return tokens;
-}
-
-vector<string> parsing_by_string(const string& i_str, const string& i_delim)
-{
-    vector<string> result;
-    cout << "parsing_by_string" << endl;
-    size_t found = i_str.find(i_delim);
-    size_t startIndex = 0;
-
-    while (found != string::npos)
-    {
-        result.push_back(string(i_str.begin() + startIndex, i_str.begin() + found));
-        startIndex = found + i_delim.size();
-        found = i_str.find(i_delim, startIndex);
-    }
-    if (startIndex != i_str.size())
-        result.push_back(string(i_str.begin() + startIndex, i_str.end()));
-    return result;
 }
 
 bool check(char* s, char* p)
