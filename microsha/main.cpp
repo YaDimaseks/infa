@@ -111,6 +111,10 @@ void print_hello() {
     cout << hello;
 }
 
+void execvp(vector<char*> v) {
+    execvp(v[0], &v[0]);
+}
+
 class Command {
 public:
     //общий вид: command <(>) file1 >(<) file2 
@@ -270,10 +274,9 @@ private:
         }
         v.push_back(NULL);
 	    prctl(PR_SET_PDEATHSIG, SIGINT);
-        pid_t pid_ = fork();
-        if (pid_ == 0) {
-            execvp(v[0], &v[0]);
-        }
+        pthread_t thr;
+        int code = pthread_create(&thr, NULL, execvp, &v);
+        pthread_join(thr, NULL);
     }
   
     int do_redirect() {
