@@ -36,7 +36,7 @@ vector<string> parsing(string s) {
 	return ans;
 }
 
-vector<string> parsing_by_string(const string& str, const string& delim)
+vector<string> parsing_by_string_shit(const string& str, const string& delim)
 {
 	vector<string> tokens;
 	size_t prev = 0, pos = 0;
@@ -50,6 +50,16 @@ vector<string> parsing_by_string(const string& str, const string& delim)
 	}
 	while (pos < str.length() && prev < str.length());
 	return tokens;
+}
+
+vector<string> parsing_by_char (const string &s, char delim) {
+	vector<string> result;
+	stringstream ss (s);
+	string item;
+	while (getline (ss, item, delim)) {
+		result.push_back (item);
+	}
+	return result;
 }
 
 bool check(char* s, char* p)
@@ -90,7 +100,7 @@ void print_hello() {
     if (dir == "/root")
         dir = "";
     if (dir > get_homedir()) {
-        vector<string> dir_vec = parsing_by_string(dir, "/");
+        vector<string> dir_vec = parsing_by_char(dir, '/');
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -102,7 +112,7 @@ void print_hello() {
         hello += "~";
     }
     else {
-        vector<string> dir_vec = parsing_by_string(dir, "/");
+        vector<string> dir_vec = parsing_by_char(dir, '/');
         hello += "/";
         for (size_t i = 0; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -119,7 +129,14 @@ void print_hello() {
 }
 
 vector<string> reg_expr(string path) {
-    vector<string> regs = parsing_by_string(path, "/");
+    vector<string> regs = parsing_by_char(path, '/');
+    
+    cout << "regs:";
+    for(auto i:regs){
+	    cout << i;
+    }
+    cout << ".";
+
     vector<vector<string> > paths;
     for (int i = 0; i < regs.size(); i++) {
         vector<string> temp;
@@ -253,25 +270,36 @@ private:
             command_args = input_args;
             redirect = false;
         }
+	convert_reg_expr();
     }
     
     int convert_reg_expr() {
         if (command_args.empty())
             return 0;
-        int pos;
-        vector<string> temp;
+        int pos = -1;
+
+	for( auto i: command_args)
+		cout << i << " ";
+	cout << endl;
+
         for (int i = command_args.size() - 1; i >= 0; i--) {
             if (command_args[i].find('*') != string::npos || command_args[i].find('?') != string::npos) {
                 pos = i;
-                reverse(temp.begin(), temp.end());
+		cout << i << endl;
                 break;
             }
-            else {
-                temp.push_back(command_args[i]);
-            }
         }
+	if (pos == -1)
+		return 0;
+	string path = command_args[pos];
+	cout << path << endl;
+	vector<string> paths = reg_expr(path);
+
+	for (auto i:paths)
+		cout << i;
+
         command_args.erase(command_args.begin() + pos);
-        command_args.insert(command_args.begin()+pos, temp.begin(), temp.end());
+	command_args.insert(command_args.begin() + pos, paths.begin(), paths.end());
         return 0;
     }
 
@@ -336,7 +364,7 @@ public:
     string input_name;
     string output_name;
     Conveyer(const string& input) {
-        vector<string> parsed = parsing_by_string(input, "|");
+        vector<string> parsed = parsing_by_char(input, '/');
         //for (int i = 0; i < parsed.size();i++){
 	//	cout << parsed[i] << endl;
 	//}
