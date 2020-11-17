@@ -125,28 +125,20 @@ void print_hello() {
     cout << hello;
 }
 
-vector<string> reg_expr(string path) {
-    vector<string> regs = parsing_by_string(path, "/");
-    
-    cout << "regs:";
-    for(auto i:regs){
-	    cout << i;
-    }
-    cout << ".";
-
+vector<string> reg_expr(vector<string> regulars) {
     vector<vector<string> > paths;
-    for (int i = 0; i < regs.size(); i++) {
-        vector<string> temp;
-        temp.push_back(regs[i]);
-        paths.push_back(temp);
+    for (int i = 0; i < regulars.size(); i++) {
+        vector<string> initial;
+        initial.push_back(regulars[i]);
+        paths.push_back(initial);
     }
-    if (paths[0][0] != "") {//если вначале был /, то начинаем с корневой папки, если нет, то с текущей
+    if (paths[0][0] != "") {
         vector<string> v;
         v.push_back(get_dir());
         paths.insert(paths.begin(), v);
 
     }
-    while (regs.size() > 1) {
+    while (regulars.size() > 1) {
         vector<string>prom;
         for (string i : paths[0]) {
             DIR* dir = opendir(i.c_str());
@@ -171,6 +163,7 @@ vector<string> reg_expr(string path) {
         paths.erase(paths.begin() + 1);
     }
     return(paths[0]);
+
 }
 
 class Command {
@@ -275,9 +268,9 @@ private:
             return 0;
         int pos = -1;
 
-	    for( auto i: command_args)
-		    cout << i << " ";
-	    cout << endl;
+	    //for( auto i: command_args)
+		//    cout << i << " ";
+	    //cout << endl;
 
         for (int i = command_args.size() - 1; i >= 0; i--) {
             if (command_args[i].find('*') != string::npos || command_args[i].find('?') != string::npos) {
@@ -290,7 +283,13 @@ private:
         cout << pos << endl;
 	    string path = command_args[pos];
 	    cout << path << endl;
-	    vector<string> paths = reg_expr(path);
+        vector<string> splited_path = parsing_by_string(path, "/");
+
+        for (int i = 0; i < splited_path.size() - 1; i++) {
+            printf("splited_path[%d]:%s\n", i, splited_path[i]);
+        }
+
+	    vector<string> paths = reg_expr(splited_path);
 
 	    for (auto i:paths)
 		    cout << i;
@@ -362,15 +361,9 @@ public:
     string output_name;
     Conveyer(const string& input) {
         vector<string> parsed = parsing_by_string(input, "|");
-<<<<<<< HEAD
         //for (int i = 0; i < parsed.size();i++){
 	//	cout << parsed[i] << endl;
 	//}
-=======
-        for (int i = 0; i < parsed.size();i++){
-		cout << parsed[i] << endl;
-	}
->>>>>>> 2ccccadd68e1008bcdcb92692b60cc66319b783e
 	vector<Command> data;
         for (auto i : parsed)
             commands.push_back(i);
