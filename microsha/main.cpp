@@ -360,10 +360,10 @@ public:
     string input_name;
     string output_name;
     Conveyer(const string& input) {
-        vector<string> parsed = parsing_by_string(input, "/");
-        //for (int i = 0; i < parsed.size();i++){
-	//	cout << parsed[i] << endl;
-	//}
+        vector<string> parsed = parsing_by_string(input, "|");
+        for (int i = 0; i < parsed.size();i++){
+		cout << parsed[i] << endl;
+	}
 	vector<Command> data;
         for (auto i : parsed)
             commands.push_back(i);
