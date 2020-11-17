@@ -86,17 +86,17 @@ string get_dir() {
 
 void print_hello() {
     string dir = get_dir();
-    cout << "get_dir = " << dir << endl;
+    //cout << "get_dir = " << dir << endl;
     string hello;
     if (dir == "/root")
         dir = "";
     if (dir > get_homedir()) {
         vector<string> dir_vec = parsing_by_string(dir, "/");
         dir_vec.erase(dir_vec.begin());
-        cout << "dir_vec = ";
-        for (auto i : dir_vec)
-            cout << i << ' ';
-        cout << endl;
+        //cout << "dir_vec = ";
+        //for (auto i : dir_vec)
+        //    cout << i << ' ';
+        //cout << endl;
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -109,6 +109,7 @@ void print_hello() {
     }
     else {
         vector<string> dir_vec = parsing_by_string(dir, "/");
+        dir_vec.erase(dir_vec.begin());
         hello += "/";
         for (size_t i = 0; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -360,7 +361,7 @@ public:
     string input_name;
     string output_name;
     Conveyer(const string& input) {
-        vector<string> parsed = parsing_by_string(input, "/");
+        vector<string> parsed = parsing_by_string(input, "|");
         //for (int i = 0; i < parsed.size();i++){
 	//	cout << parsed[i] << endl;
 	//}
@@ -446,6 +447,6 @@ int main() {
 		print_hello();
 		getline(cin, input);
 		Conveyer conveyer(input);
-        	conveyer.exec();
+        conveyer.exec();
 	}
 }
