@@ -52,14 +52,22 @@ vector<string> parsing_by_string_shit(const string& str, const string& delim)
 	return tokens;
 }
 
-vector<string> parsing_by_char (const string &s, char delim) {
-	vector<string> result;
-	stringstream ss (s);
-	string item;
-	while (getline (ss, item, delim)) {
-		result.push_back (item);
-	}
-	return result;
+vector<string> parsing_by_string(const string& i_str, const string& i_delim)
+{
+    vector<string> result;
+    cout << "parsing_by_string" << endl;
+    size_t found = i_str.find(i_delim);
+    size_t startIndex = 0;
+
+    while (found != string::npos)
+    {
+        result.push_back(string(i_str.begin() + startIndex, i_str.begin() + found));
+        startIndex = found + i_delim.size();
+        found = i_str.find(i_delim, startIndex);
+    }
+    if (startIndex != i_str.size())
+        result.push_back(string(i_str.begin() + startIndex, i_str.end()));
+    return result;
 }
 
 bool check(char* s, char* p)
@@ -100,7 +108,7 @@ void print_hello() {
     if (dir == "/root")
         dir = "";
     if (dir > get_homedir()) {
-        vector<string> dir_vec = parsing_by_char(dir, '/');
+        vector<string> dir_vec = parsing_by_string(dir, "/");
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -112,7 +120,7 @@ void print_hello() {
         hello += "~";
     }
     else {
-        vector<string> dir_vec = parsing_by_char(dir, '/');
+        vector<string> dir_vec = parsing_by_string(dir, "/");
         hello += "/";
         for (size_t i = 0; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -129,7 +137,7 @@ void print_hello() {
 }
 
 vector<string> reg_expr(string path) {
-    vector<string> regs = parsing_by_char(path, '/');
+    vector<string> regs = parsing_by_string(path, "/");
     
     cout << "regs:";
     for(auto i:regs){
@@ -186,6 +194,7 @@ public:
     Command(const string& input) {
         parsing_input(input);
         command_split();
+        convert_reg_expr();
     }
     void print()
     {
@@ -270,7 +279,6 @@ private:
             command_args = input_args;
             redirect = false;
         }
-	convert_reg_expr();
     }
     
     int convert_reg_expr() {
@@ -278,28 +286,28 @@ private:
             return 0;
         int pos = -1;
 
-	for( auto i: command_args)
-		cout << i << " ";
-	cout << endl;
+	    for( auto i: command_args)
+		    cout << i << " ";
+	    cout << endl;
 
         for (int i = command_args.size() - 1; i >= 0; i--) {
             if (command_args[i].find('*') != string::npos || command_args[i].find('?') != string::npos) {
-                pos = i;
-		cout << i << endl;
+               pos = i;
                 break;
             }
         }
-	if (pos == -1)
-		return 0;
-	string path = command_args[pos];
-	cout << path << endl;
-	vector<string> paths = reg_expr(path);
+	    if (pos == -1)
+		    return 0;
+        cout << pos << endl;
+	    string path = command_args[pos];
+	    cout << path << endl;
+	    vector<string> paths = reg_expr(path);
 
-	for (auto i:paths)
-		cout << i;
+	    for (auto i:paths)
+		    cout << i;
 
         command_args.erase(command_args.begin() + pos);
-	command_args.insert(command_args.begin() + pos, paths.begin(), paths.end());
+	    command_args.insert(command_args.begin() + pos, paths.begin(), paths.end());
         return 0;
     }
 
@@ -364,7 +372,7 @@ public:
     string input_name;
     string output_name;
     Conveyer(const string& input) {
-        vector<string> parsed = parsing_by_char(input, '/');
+        vector<string> parsed = parsing_by_string(input, "/");
         //for (int i = 0; i < parsed.size();i++){
 	//	cout << parsed[i] << endl;
 	//}
