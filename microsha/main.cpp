@@ -1,5 +1,4 @@
 #include <stdio.h>
-//#include <process.h>
 #include <csignal>
 #include <unistd.h>
 #include <fcntl.h>
@@ -14,6 +13,8 @@
 #include <iostream>
 #include <sstream>
 #include <pwd.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <dirent.h>
 #include <wait.h>
 
@@ -50,22 +51,6 @@ vector<string> parsing_by_string(const string& str, const string& delim)
 	}
 	while (pos < str.length() && prev < str.length());
 	return tokens;
-}
-
-bool check(char* s, char* p)
-{
-    char* rs = 0, * rp;
-    while (1)
-        if (*p == '*')
-            rs = s, rp = ++p;
-        else if (!*s)
-            return !*p;
-        else if (*s == *p || *p == '?')
-            ++s, ++p;
-        else if (rs)
-            s = ++rs, p = rp;
-        else
-            return false;
 }
 
 string get_homedir() {
@@ -213,6 +198,11 @@ public:
     bool is_cd() { return is_empty() ? false : command_args[0] == "cd"; }
     bool is_time() { return is_empty() ? false : command_args[0] == "time"; }
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
+    void delete_time() {
+        if (is_time()) {
+            command_args.erase(command_args.begin());
+        }
+    }
 private:
     bool redirect = true;
   
@@ -264,7 +254,7 @@ private:
     }
     
     int convert_reg_expr() {
-        if (command_args.empty())
+        /*if (command_args.empty())
             return 0;
         int pos = -1;
 
@@ -285,8 +275,8 @@ private:
 	    cout << path << endl;
         vector<string> splited_path = parsing_by_string(path, "/");
 
-        for (int i = 0; i < splited_path.size() - 1; i++) {
-            printf("splited_path[%d]:%s\n", i, splited_path[i]);
+        for (int i = 0; i < splited_path.size(); i++) {
+            printf("splited_path[%d]:%s\n", i, splited_path[i].c_str());
         }
 
 	    vector<string> paths = reg_expr(splited_path);
@@ -295,7 +285,7 @@ private:
 		    cout << i;
 
         command_args.erase(command_args.begin() + pos);
-	    command_args.insert(command_args.begin() + pos, paths.begin(), paths.end());
+	    command_args.insert(command_args.begin() + pos, paths.begin(), paths.end());*/
         return 0;
     }
 
@@ -353,6 +343,48 @@ private:
     }
 };
 
+class Matcher {
+public:
+    Matcher(const char* name, const char* mask) : name(name), mask(mask) {}
+
+    bool match() {
+        if (!try_partial_match())
+            return false;
+
+        while (*mask == '*') {
+            ++mask;
+            while (!try_partial_match() && *name != '\0')
+                ++name;
+        }
+
+        return is_full_match();
+    }
+
+private:
+    bool is_full_match() const { return *name == '\0' && *mask == '\0'; }
+
+    bool patrial_match() {
+        while (*name != '\0' && (*name == *mask || *mask == '?')) {
+            ++name;
+            ++mask;
+        }
+
+        return is_full_match() || *mask == '*';
+    }
+
+    bool try_partial_match() {
+        auto tmp = *this;
+        if (tmp.patrial_match()) {
+            *this = tmp;
+            return true;
+        }
+        return false;
+    }
+
+    const char* name;
+    const char* mask;
+};
+
 class Conveyer {
 public:
     // command1 < file1 | command2 | ... | commandn > file2
@@ -387,7 +419,29 @@ public:
     ~Conveyer() {}
     int exec() {
         if (commands.empty() || commands[0].is_empty()) return 0;
-        if (commands[0].is_time()) {}
+        if (commands[0].is_time()) {
+            commands[0].delete_time();
+            struct rusage start, stop;
+            struct timeval start_real_time, stop_real_time;
+            getrusage(RUSAGE_CHILDREN, &start);
+            gettimeofday(&start_real_time, NULL);
+            ////////
+            exec_conveyer();
+            ////////
+            gettimeofday(&stop_real_time, NULL);
+            getrusage(RUSAGE_CHILDREN, &stop);
+            auto real_time_sec = stop_real_time.tv_sec - start_real_time.tv_sec;
+            auto real_time_usec = stop_real_time.tv_usec - start_real_time.tv_usec;
+            cerr << "real: " << real_time_sec << "." << setfill('0') << setw(3)
+                << real_time_usec << endl
+                << "system: " << stop.ru_stime.tv_sec - start.ru_stime.tv_sec << "."
+                << setfill('0') << setw(3)
+                << stop.ru_stime.tv_usec - start.ru_stime.tv_usec << endl
+                << "user: " << stop.ru_utime.tv_sec - start.ru_utime.tv_sec << "."
+                << setfill('0') << setw(3)
+                << stop.ru_utime.tv_usec - start.ru_utime.tv_usec << endl;
+            return 0;
+        }
         else if (commands.size() == 1) {
             commands[0].exec();
             return 0;
