@@ -111,47 +111,6 @@ void print_hello() {
     cout << hello;
 }
 
-vector<string> reg_expr(vector<string> regulars) {
-    vector<vector<string> > paths;
-    for (int i = 0; i < regulars.size(); i++) {
-        vector<string> initial;
-        initial.push_back(regulars[i]);
-        paths.push_back(initial);
-    }
-    if (paths[0][0] != "") {
-        vector<string> v;
-        v.push_back(get_dir());
-        paths.insert(paths.begin(), v);
-
-    }
-    while (regulars.size() > 1) {
-        vector<string>prom;
-        for (string i : paths[0]) {
-            DIR* dir = opendir(i.c_str());
-            if (dir != nullptr) {
-                for (dirent* d = readdir(dir); d != nullptr; d = readdir(dir)) {
-                    if (paths.size() > 2) {
-                        if (d->d_type == DT_DIR && check(d->d_name, (char*)paths[1][0].c_str())) {
-                            prom.push_back(i + string("/") + string(d->d_name));
-                        }
-
-                    }
-                    else {
-                        if (d->d_type != DT_DIR && check(d->d_name, (char*)paths[1][0].c_str())) {
-                            prom.push_back(i + string("/") + string(d->d_name));
-                        }
-
-                    }
-                }
-            }
-        }
-        paths[0] = prom;
-        paths.erase(paths.begin() + 1);
-    }
-    return(paths[0]);
-
-}
-
 class Command {
 public:
     //общий вид: command <(>) file1 >(<) file2 
