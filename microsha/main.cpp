@@ -14,6 +14,7 @@
 #include <iostream>
 #include <sstream>
 #include <pwd.h>
+#include <dirent.h>
 #include <wait.h>
 
 using namespace std;
@@ -49,6 +50,22 @@ vector<string> parsing_by_string(const string& str, const string& delim)
 	}
 	while (pos < str.length() && prev < str.length());
 	return tokens;
+}
+
+bool check(char* s, char* p)
+{
+    char* rs = 0, * rp;
+    while (1)
+        if (*p == '*')
+            rs = s, rp = ++p;
+        else if (!*s)
+            return !*p;
+        else if (*s == *p || *p == '?')
+            ++s, ++p;
+        else if (rs)
+            s = ++rs, p = rp;
+        else
+            return false;
 }
 
 string get_homedir() {
@@ -101,6 +118,47 @@ void print_hello() {
     cout << hello;
 }
 
+vector<string> reg_expr(string path) {
+    vector<string> regs = parsing_by_string(path, "/");
+    vector<vector<string> > paths;
+    for (int i = 0; i < regs.size(); i++) {
+        vector<string> temp;
+        temp.push_back(regs[i]);
+        paths.push_back(temp);
+    }
+    if (paths[0][0] != "") {//если вначале был /, то начинаем с корневой папки, если нет, то с текущей
+        vector<string> v;
+        v.push_back(get_dir());
+        paths.insert(paths.begin(), v);
+
+    }
+    while (regs.size() > 1) {
+        vector<string>prom;
+        for (string i : paths[0]) {
+            DIR* dir = opendir(i.c_str());
+            if (dir != nullptr) {
+                for (dirent* d = readdir(dir); d != nullptr; d = readdir(dir)) {
+                    if (paths.size() > 2) {
+                        if (d->d_type == DT_DIR && check(d->d_name, (char*)paths[1][0].c_str())) {
+                            prom.push_back(i + string("/") + string(d->d_name));
+                        }
+
+                    }
+                    else {
+                        if (d->d_type != DT_DIR && check(d->d_name, (char*)paths[1][0].c_str())) {
+                            prom.push_back(i + string("/") + string(d->d_name));
+                        }
+
+                    }
+                }
+            }
+        }
+        paths[0] = prom;
+        paths.erase(paths.begin() + 1);
+    }
+    return(paths[0]);
+}
+
 class Command {
 public:
     //общий вид: command <(>) file1 >(<) file2 
@@ -149,8 +207,11 @@ public:
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
 private:
     bool redirect = true;
+  
     bool failed = false;
+   
     void parsing_input(string input) { input_args = parsing(input); }
+   
     void command_split() { //split команды на command_args, input_name и output_name
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
@@ -178,18 +239,14 @@ private:
 	}
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
-            //files.push_back(make_pair(*(out_iter + 1), 1));
             output_name = *(out_iter + 1);
             if (in_iter != input_args.end())
-                //files.push_back(make_pair(*(in_iter + 1), 0));
                 input_name = *(in_iter + 1);
         }
         else if (out_iter > in_iter) {
             command_args.assign(input_args.begin(), in_iter);
-            //files.push_back(make_pair(*(in_iter + 1), 0));
             input_name = *(in_iter + 1);
             if (out_iter != input_args.end())
-                //files.push_back(make_pair(*(out_iter + 1), 1));
                 output_name = *(out_iter + 1);
         }
         else {
@@ -197,10 +254,32 @@ private:
             redirect = false;
         }
     }
+    
+    int convert_reg_expr() {
+        if (command_args.empty())
+            return 0;
+        int pos;
+        vector<string> temp;
+        for (int i = command_args.size() - 1; i >= 0; i--) {
+            if (command_args[i].find('*') != string::npos || command_args[i].find('?') != string::npos) {
+                pos = i;
+                reverse(temp.begin(), temp.end());
+                break;
+            }
+            else {
+                temp.push_back(command_args[i]);
+            }
+        }
+        command_args.erase(command_args.begin() + pos);
+        command_args.insert(command_args.begin()+pos, temp.begin(), temp.end());
+        return 0;
+    }
+
     void exec_pwd()
     {
         cout << get_dir() << endl;
     }
+  
     void exec_cd(const string& arg)
     {
         int code = chdir(arg.c_str());
@@ -209,6 +288,7 @@ private:
             cerr << "No such file or directory" << endl;
         }
     }
+ 
     void exec_bash_command(const vector<string>& command_args) {
         vector<char*> v;
         for (size_t i = 0; i < command_args.size(); i++) {
@@ -225,6 +305,7 @@ private:
         execvp(v[0], &v[0]);
 	perror(v[0]);
     }
+  
     int do_redirect() {
         if (!redirect) return 0;
         int fd_in, fd_out;
