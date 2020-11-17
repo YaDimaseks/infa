@@ -18,6 +18,7 @@
 #include <sys/resource.h>
 #include <dirent.h>
 #include <wait.h>
+#include <pthread.h>
 
 using namespace std;
 
@@ -109,11 +110,6 @@ void print_hello() {
     else
         hello += ">";
     cout << hello;
-}
-
-void* exevp_my(void* v) {
-    vector<char*> a = *(vector<char*>*)v;
-    execvp(a[0], &a[0]);
 }
 
 class Command {
@@ -274,10 +270,10 @@ private:
             v.push_back((char*)command_args[i].c_str());
         }
         v.push_back(NULL);
-	    prctl(PR_SET_PDEATHSIG, SIGINT);
-        pthread_t thr;
-        int code = pthread_create(&thr, NULL, execvp_my, (void*)v);
-        pthread_join(thr, NULL);
+        prctl(PR_SET_PDEATHSIG, SIGINT); // exit process when parent dies
+        execvp(v[0], &v[0]);
+        cerr << "Execution error" << endl;
+        exit(1);
     }
   
     int do_redirect() {
@@ -383,7 +379,7 @@ public:
             commands[0].delete_time();
             struct rusage start, stop;
             struct timeval start_real_time, stop_real_time;
-            getrusage(RUSAGE_SELF, &start);
+            getrusage(RUSAGE_CHILDREN, &start);
             gettimeofday(&start_real_time, NULL);
             ////////
             exec();
