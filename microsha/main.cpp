@@ -86,11 +86,17 @@ string get_dir() {
 
 void print_hello() {
     string dir = get_dir();
+    cout << "get_dir = " << dir << endl;
     string hello;
     if (dir == "/root")
         dir = "";
     if (dir > get_homedir()) {
         vector<string> dir_vec = parsing_by_string(dir, "/");
+        dir_vec.erase(dir_vec.begin());
+        cout << "dir_vec = ";
+        for (auto i : dir_vec)
+            cout << i << ' ';
+        cout << endl;
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
