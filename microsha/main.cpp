@@ -111,8 +111,9 @@ void print_hello() {
     cout << hello;
 }
 
-void execvp(vector<char*> v) {
-    execvp(v[0], &v[0]);
+void* exevp_my(void* v) {
+    vector<char*>* a = (vector<char*>*)v;
+    execvp(&v[0], &&v[0]);
 }
 
 class Command {
@@ -275,7 +276,7 @@ private:
         v.push_back(NULL);
 	    prctl(PR_SET_PDEATHSIG, SIGINT);
         pthread_t thr;
-        int code = pthread_create(&thr, NULL, execvp, &v);
+        int code = pthread_create(&thr, NULL, execvp_my, &v);
         pthread_join(thr, NULL);
     }
   
