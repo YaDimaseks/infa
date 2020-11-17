@@ -269,15 +269,11 @@ private:
             v.push_back((char*)command_args[i].c_str());
         }
         v.push_back(NULL);
-        //for (int i = 0; v[i] != NULL; i++) {
-        //    printf("v[%d]='%s'\n", i, v[i]);
-        //}
 	    prctl(PR_SET_PDEATHSIG, SIGINT);
-        execvp(v[0], &v[0]);
-        perror(v[0]);
-	prctl(PR_SET_PDEATHSIG, SIGINT);
-        execvp(v[0], &v[0]);
-	perror(v[0]);
+        pid_t pid_ = fork();
+        if (pid_ == 0) {
+            execvp(v[0], &v[0]);
+        }
     }
   
     int do_redirect() {
@@ -383,7 +379,7 @@ public:
             commands[0].delete_time();
             struct rusage start, stop;
             struct timeval start_real_time, stop_real_time;
-            getrusage(RUSAGE_CHILDREN, &start);
+            getrusage(RUSAGE_SELF, &start);
             gettimeofday(&start_real_time, NULL);
             ////////
             exec();
