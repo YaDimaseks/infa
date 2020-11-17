@@ -362,9 +362,15 @@ public:
     string output_name;
     Conveyer(const string& input) {
         vector<string> parsed = parsing_by_string(input, "|");
+<<<<<<< HEAD
         //for (int i = 0; i < parsed.size();i++){
 	//	cout << parsed[i] << endl;
 	//}
+=======
+        for (int i = 0; i < parsed.size();i++){
+		cout << parsed[i] << endl;
+	}
+>>>>>>> 2ccccadd68e1008bcdcb92692b60cc66319b783e
 	vector<Command> data;
         for (auto i : parsed)
             commands.push_back(i);
