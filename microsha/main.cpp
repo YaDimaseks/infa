@@ -182,6 +182,7 @@ public:
     bool is_cd() { return is_empty() ? false : command_args[0] == "cd"; }
     bool is_time() { return is_empty() ? false : command_args[0] == "time"; }
     bool is_pwd() { return is_empty() ? false : command_args[0] == "pwd"; }
+    bool is_set() { return is_empty() ? false : command_args[0] == "set"; }
     void delete_time() {
         if (is_time()) {
             command_args.erase(command_args.begin());
@@ -413,6 +414,10 @@ public:
             return 0;
         }
         if (commands[0].is_cd()) {
+            commands[0].exec();
+            return 0;
+        }
+        if (commands[0].is_set()) {
             commands[0].exec();
             return 0;
         }
