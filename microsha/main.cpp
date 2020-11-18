@@ -205,7 +205,7 @@ private:
             return;
         }
         if (out_counter > 1) {
-            cerr << "Too many '>'";
+            cerr << "Too many '>'" << endl;
             failed = true;
             return;
         }
