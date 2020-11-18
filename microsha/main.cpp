@@ -481,20 +481,15 @@ int main() {
         signal(SIGKILL, sig_catch);
         signal(SIGINT, sig_catch);
 		print_hello();
-        try {
-            string input;
-            if (!getline(cin, input))
-                throw string("EOF");
-            if (signal_ == 9)
-                break;
-            if (signal_ == 2)
-                continue;
-            Conveyer conveyer(input);
-            conveyer.exec();
-        }
-        catch (string a) {
-            cerr << a << " was occured" << endl;
+        string input;
+        if (!getline(cin, input))
+            throw string("EOF");
+        if (signal_ == 9)
             break;
-        }
+        if (signal_ == 2)
+            continue;
+        Conveyer conveyer(input);
+        conveyer.exec();
+       
 	}
 }
