@@ -169,8 +169,11 @@ public:
             else
                 cerr << "Too many arguments for command 'cd'" << endl;
         }
-	else if (is_pwd()) {
+	    else if (is_pwd()) {
             exec_pwd();
+        }
+        else if (is_set()) {
+            exec_set();
         }
         else {
             if (do_redirect() == 0)
@@ -325,6 +328,12 @@ private:
         }
     }
  
+    void exec_set() {
+        for (int i = 0; environ[i] != 0; i++) {
+            cout << environ[i] << endl;
+        }
+    }
+
     void exec_bash_command(const vector<string>& command_args) {
         if (failed) return;
         vector<char*> v;
