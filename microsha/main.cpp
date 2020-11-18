@@ -412,7 +412,7 @@ public:
                 << stop.ru_utime.tv_usec - start.ru_utime.tv_usec << endl;
             return 0;
         }
-        else if (commands.size() == 1) {
+        if (commands[0].is_cd()) {
             commands[0].exec();
             return 0;
         }
@@ -427,7 +427,10 @@ public:
         for (int i = 0; i != commands.size(); i++, cur_fd++, prev_fd++) {
             pid_t pid = fork();
             if (pid == 0) {
-                if (i == 0) {
+                if (commands.size() == 1) {
+                    commands[0].exec();
+                }
+                else if (i == 0) {
                     dup2(pipes[0][1], STDOUT_FILENO);
                     close(pipes[0][0]);
                     commands[i].exec();
