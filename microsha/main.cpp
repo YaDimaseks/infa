@@ -191,7 +191,7 @@ private:
         return false;
     }
     //конвертаци€ всех регул€рных выражений в строки
-    vector<string> convert_args(vector<string>& args) {
+    void convert_args(vector<string>& args) {
         for (int i = 0; i < args.size(); i++) {
             if (!is_reg_expr(args[i])) {
                 continue;
@@ -242,14 +242,14 @@ private:
                             continue;
                         }
                         if (args_ptr > 0) {
-                            if (d->d_type == DT_DIR &&
-                                match_reg_expr(d->d_name, reverse_args[args_ptr])) {
+                            Matcher m(d->d_name, reverse_args[args_ptr].c_str());
+                            if (d->d_type == DT_DIR && m.match()) {
                                 temp.push_back(i + d->d_name);
                             }
                         }
                         else {
-                            if ((d->d_type == DT_DIR || (d->d_type == DT_REG && !is_dir)) &&
-                                match_reg_expr(d->d_name, reverse_args[args_ptr])) {
+                            Matcher m(d->d_name, reverse_args[args_ptr].c_str());
+                            if ((d->d_type == DT_DIR || (d->d_type == DT_REG && !is_dir)) && m.match()) {
                                 temp.push_back(i + d->d_name);
                             }
                         }
@@ -295,6 +295,7 @@ private:
   
     int do_redirect() {
         if (!redirect) return 0;
+        int fd_in = -1, fd_out = -1;
         if (!input_name.empty()) {
             fd_in = open(input_name.c_str(), O_RDONLY);
             if (fd_in == -1) {
