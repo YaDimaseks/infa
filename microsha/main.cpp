@@ -478,14 +478,12 @@ void sig_catch(int signal) {
 
 int main() {
 	while(true){
-        signal(SIGKILL, sig_catch);
+        signal_ = 0;
         signal(SIGINT, sig_catch);
 		print_hello();
         string input;
         if (!getline(cin, input))
             throw string("EOF");
-        if (signal_ == 9)
-            break;
         if (signal_ == 2)
             continue;
         Conveyer conveyer(input);
