@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <csignal>
+#include <signal.h>
 #include <unistd.h>
 #include <iomanip>  
 #include <fcntl.h>
@@ -22,7 +23,8 @@
 
 using namespace std;
 
-vector<string> parsing(string s) {
+//разделение по пробелу и табуляции("" не входят)
+vector<string> split_space(const string& s) {
 	istringstream ist(s);
 	vector<string> ans;
 	while(ist){
@@ -30,16 +32,10 @@ vector<string> parsing(string s) {
 		ist >> token;
 		if (token != "") ans.push_back(token);
 	}
-	//cout << "parsing" << endl;
-	//for (int i = 0; i < ans.size(); i++){
-	//	cout << ans[i] << endl;
-	//}
-	//cout << "end parsing" << endl;
-
 	return ans;
 }
-
-vector<string> parsing_by_string(const string& str, const string& delim)
+//разделение по string("" могут быть)
+vector<string> split_by_string(const string& str, const string& delim)
 {
 	vector<string> tokens;
 	size_t prev = 0, pos = 0;
@@ -54,7 +50,7 @@ vector<string> parsing_by_string(const string& str, const string& delim)
 	while (pos < str.length() && prev < str.length());
 	return tokens;
 }
-
+//возвращает путь к домашней директории из корневой
 string get_homedir() {
     const char* dir;
     if ((dir = getenv("HOME")) == NULL) {
@@ -63,27 +59,22 @@ string get_homedir() {
     string ret = dir;
     return ret;
 }
-
+//возвращает путь к текущей директории(домашняя обозначается как ~)
 string get_dir() {
     char wd[1000];
     getcwd(wd, sizeof(wd));
     string dir = wd;
     return dir;
 }
-
+//печать приветственной строки
 void print_hello() {
     string dir = get_dir();
-    //cout << "get_dir = " << dir << endl;
     string hello;
     if (dir == "/root")
-        dir = "";
+        dir = "/";
     if (dir > get_homedir()) {
-        vector<string> dir_vec = parsing_by_string(dir, "/");
+        vector<string> dir_vec = split_by_string(dir, "/");
         dir_vec.erase(dir_vec.begin());
-        //cout << "dir_vec = ";
-        //for (auto i : dir_vec)
-        //    cout << i << ' ';
-        //cout << endl;
         hello += "~/";
         for (size_t i = 2; i < dir_vec.size(); i++) {
             hello += dir_vec[i];
@@ -95,7 +86,7 @@ void print_hello() {
         hello += "~";
     }
     else {
-        vector<string> dir_vec = parsing_by_string(dir, "/");
+        vector<string> dir_vec = split_by_string(dir, "/");
         dir_vec.erase(dir_vec.begin());
         hello += "/";
         for (size_t i = 0; i < dir_vec.size(); i++) {
@@ -122,36 +113,25 @@ public:
     Command(const string& input) {
         parsing_input(input);
         command_split();
-        convert_reg_expr();
+        convert_args(command_args);
     }
-    void print()
-    {
-        for (auto& arg : input_args)
-        {
-            cout << cout.width(2) << arg;
-        }
-        cout << endl;
-    }
+
     int exec() {
-        if (failed) return 1;
-	if (failed) return 1;
-        if (is_empty()) {
-            perror("Command is empty");
-        }
-	else if (is_cd()) {
+	    if (failed) exit(1);
+	    else if (is_cd()) {
             if (command_args.size() == 1)
                 exec_cd(get_homedir());
             else if (command_args.size() == 2)
                 exec_cd(command_args[1]);
             else
-                perror("Too many arguments for command 'cd'");
+                cerr << "Too many arguments for command 'cd'" << endl;
         }
 	else if (is_pwd()) {
             exec_pwd();
         }
         else {
-            do_redirect();
-            exec_bash_command(command_args);
+            if (do_redirect() == 0)
+                exec_bash_command(command_args);
         }
 	return 0;
     }
@@ -166,36 +146,26 @@ public:
     }
 private:
     bool redirect = true;
-  
+    
     bool failed = false;
    
-    void parsing_input(string input) { input_args = parsing(input); }
-   
-    void command_split() { //split команды на command_args, input_name и output_name
+    void parsing_input(const string& input) { input_args = split_space(input); }
+    //split команды на command_args, input_name и output_name
+    void command_split() {
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
         auto out_iter = find(input_args.begin(), input_args.end(), ">");
         auto out_counter = count(input_args.begin(), input_args.end(), ">");
         if (in_counter > 1) {
-            perror("too many '<'");
+            cerr << "too many '<'" << endl;
             failed = true;
             return;
         }
         if (out_counter > 1) {
-            perror("Too many '>'");
+            cerr << "Too many '>'";
             failed = true;
             return;
         }
-        if (in_counter > 1){
-                perror("too many '<'");
-		failed = true;
-		return;
-	}
-        if (out_counter > 1){
-        	perror("Too many '>'");
-		failed = true;
-		return;
-	}
         if (in_iter > out_iter) {
             command_args.assign(input_args.begin(), out_iter);
             output_name = *(out_iter + 1);
@@ -213,41 +183,88 @@ private:
             redirect = false;
         }
     }
-    
-    int convert_reg_expr() {
-        /*if (command_args.empty())
-            return 0;
-        int pos = -1;
 
-	    //for( auto i: command_args)
-		//    cout << i << " ";
-	    //cout << endl;
-
-        for (int i = command_args.size() - 1; i >= 0; i--) {
-            if (command_args[i].find('*') != string::npos || command_args[i].find('?') != string::npos) {
-               pos = i;
-                break;
+    bool is_reg_expr(const string& arg) {
+        if (arg.find('*') != string::npos || arg.find('?') != string::npos) {
+            return true;
+        }
+        return false;
+    }
+    //конвертация всех регулярных выражений в строки
+    vector<string> convert_args(vector<string>& args) {
+        for (int i = 0; i < args.size(); i++) {
+            if (!is_reg_expr(args[i])) {
+                continue;
             }
+            vector<string> splited_arg = split_by_string(args[i], "/");
+            vector<string> converted_arg = convert_reg_expr(splited_arg);
+            if (converted_arg.empty())
+                continue;
+            args.erase(args.begin() + i);
+            args.insert(args.begin() + i, converted_arg.begin(), converted_arg.end());
         }
-	    if (pos == -1)
-		    return 0;
-        cout << pos << endl;
-	    string path = command_args[pos];
-	    cout << path << endl;
-        vector<string> splited_path = parsing_by_string(path, "/");
-
-        for (int i = 0; i < splited_path.size(); i++) {
-            printf("splited_path[%d]:%s\n", i, splited_path[i].c_str());
+    }
+    //на вход подается путь, разделенный по слешу
+    vector<string> convert_reg_expr(vector<string>& args) {
+        vector<string> result;
+        string path;
+        bool flag = false;
+        if (args[0].empty()) {
+            path = "/";
+            flag = true;
         }
-
-	    vector<string> paths = reg_expr(splited_path);
-
-	    for (auto i:paths)
-		    cout << i;
-
-        command_args.erase(command_args.begin() + pos);
-	    command_args.insert(command_args.begin() + pos, paths.begin(), paths.end());*/
-        return 0;
+        else {
+            path = get_dir() + "/";
+        }
+        result.push_back("");
+        bool is_dir = false;
+        if (args[args.size() - 1].empty()) {
+            is_dir = true;
+        }
+        vector<string> reverse_args;
+        for (auto it = args.rbegin(); it != args.rend(); it++) {
+            if (it->empty()) {
+                continue;
+            }
+            reverse_args.push_back(*it);
+        }
+        int args_ptr = reverse_args.size() - 1;
+        while (args_ptr >= 0) {
+            vector<string> temp;
+            for (string& i : result) {
+                if (flag) {
+                    i += '/';
+                }
+                DIR* dir = opendir((path + i).c_str());
+                if (dir != nullptr) {
+                    for (dirent* d = readdir(dir); d != nullptr; d = readdir(dir)) {
+                        if (d->d_name[0] == '.') {
+                            continue;
+                        }
+                        if (args_ptr > 0) {
+                            if (d->d_type == DT_DIR &&
+                                match_reg_expr(d->d_name, reverse_args[args_ptr])) {
+                                temp.push_back(i + d->d_name);
+                            }
+                        }
+                        else {
+                            if ((d->d_type == DT_DIR || (d->d_type == DT_REG && !is_dir)) &&
+                                match_reg_expr(d->d_name, reverse_args[args_ptr])) {
+                                temp.push_back(i + d->d_name);
+                            }
+                        }
+                    }
+                }
+                closedir(dir);
+            }
+            result = temp;
+            args_ptr--;
+            flag = true;
+        }
+        if (result.empty()) {
+            return {};
+        }
+        return result;
     }
 
     void exec_pwd()
@@ -265,6 +282,7 @@ private:
     }
  
     void exec_bash_command(const vector<string>& command_args) {
+        if (failed) return;
         vector<char*> v;
         for (size_t i = 0; i < command_args.size(); i++) {
             v.push_back((char*)command_args[i].c_str());
@@ -273,16 +291,14 @@ private:
         prctl(PR_SET_PDEATHSIG, SIGINT); // exit process when parent dies
         execvp(v[0], &v[0]);
         cerr << "Execution error" << endl;
-        exit(1);
     }
   
     int do_redirect() {
         if (!redirect) return 0;
-        int fd_in, fd_out;
         if (!input_name.empty()) {
             fd_in = open(input_name.c_str(), O_RDONLY);
             if (fd_in == -1) {
-                perror("Can't open input file");
+                cerr << "Can't open input file" << endl;
                 return 1;
             }
             dup2(fd_in, STDIN_FILENO);
@@ -290,7 +306,7 @@ private:
         if (!output_name.empty()) {
             fd_out = open(output_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IWRITE | S_IREAD);
             if (fd_out == -1) {
-                perror("Can't open output file");
+                cerr << "Can't open output file" << endl;
                 return 1;
             }
             dup2(fd_out, STDOUT_FILENO);
@@ -348,22 +364,18 @@ public:
     string input_name;
     string output_name;
     Conveyer(const string& input) {
-        vector<string> parsed = parsing_by_string(input, "|");
-        //for (int i = 0; i < parsed.size();i++){
-	//	cout << parsed[i] << endl;
-	//}
-	vector<Command> data;
+        vector<string> parsed = split_by_string(input, "|");
         for (auto i : parsed)
             commands.push_back(i);
         if (commands.size() > 1) {
             for (int i = 0; i != commands.size() - 1; i++) {
                 if (!commands[i].output_name.empty() && !(i == commands.size() - 1)) {
-                    perror("'>' can only be use in last conponent of conveyer");
-                    exit(1);
+                    cerr << "'>' can only be use in last conponent of conveyer" << endl;
+                    failed = true;
                 }
                 if (!commands[i].input_name.empty() && !(i == 0)) {
-                    perror("'<' can only be use in first conponent of conveyer");
-                    exit(1);
+                    cerr << "'<' can only be use in first conponent of conveyer" << endl;
+                    failed = true;
                 }
             }
         }
@@ -374,7 +386,7 @@ public:
     }
     ~Conveyer() {}
     int exec() {
-        if (commands.empty() || commands[0].is_empty()) return 0;
+        if (commands.empty() || commands[0].is_empty() || failed) return 0;
         if (commands[0].is_time()) {
             commands[0].delete_time();
             struct rusage start, stop;
@@ -406,7 +418,8 @@ public:
         vector<int[2]> pipes(commands.size() - 1);
         for (auto& fd : pipes) {
             if (pipe2(fd, O_CLOEXEC) != 0) {
-                perror("Can't open pipe\n");
+                cerr << "Can't open pipe\n" << endl;
+                return 1;
             }
         }
         for (int i = 0; i != commands.size(); i++, cur_fd++, prev_fd++) {
@@ -431,7 +444,8 @@ public:
                 }
             }
             else {
-                if (i == commands.size() - 1) {//на последней команде закрываем все пайпы и ждем детей
+                //на последней команде закрываем все пайпы и ждем детей
+                if (i == commands.size() - 1) {
                     for (auto& i : pipes) {
                         if (i[0] != -1) {
                             close(i[0]);
@@ -447,15 +461,35 @@ public:
         return 0;
     }
 private:
+    bool failed = false;
     //int fd_in, fd_out;
 };
 
+int signal_ = 0;
+
+void sig_catch(int signal) {
+    signal_ = signal;
+}
+
 int main() {
-    string input;
 	while(true){
+        signal(SIGKILL, sig_catch);
+        signal(SIGINT, sig_catch);
 		print_hello();
-		getline(cin, input);
-		Conveyer conveyer(input);
-        conveyer.exec();
+        try {
+            string input;
+            if (!getline(cin, input))
+                throw string("EOF");
+            if (signal_ == 9)
+                break;
+            if (signal_ == 2)
+                continue;
+            Conveyer conveyer(input);
+            conveyer.exec();
+        }
+        catch (string a) {
+            cerr << a << " was occured" << endl;
+            break;
+        }
 	}
 }
