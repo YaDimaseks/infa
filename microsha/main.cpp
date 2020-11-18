@@ -103,6 +103,49 @@ void print_hello() {
     cout << hello;
 }
 
+class Matcher {
+public:
+    Matcher(const char* name, const char* mask) : name(name), mask(mask) {}
+
+    bool match() {
+        if (!try_partial_match())
+            return false;
+
+        while (*mask == '*') {
+            ++mask;
+            while (!try_partial_match() && *name != '\0')
+                ++name;
+        }
+
+        return is_full_match();
+    }
+
+private:
+    bool is_full_match() const { return *name == '\0' && *mask == '\0'; }
+
+    bool patrial_match() {
+        while (*name != '\0' && (*name == *mask || *mask == '?')) {
+            ++name;
+            ++mask;
+        }
+
+        return is_full_match() || *mask == '*';
+    }
+
+    bool try_partial_match() {
+        auto tmp = *this;
+        if (tmp.patrial_match()) {
+            *this = tmp;
+            return true;
+        }
+        return false;
+    }
+
+    const char* name;
+    const char* mask;
+};
+
+
 class Command {
 public:
     //общий вид: command <(>) file1 >(<) file2 
@@ -314,48 +357,6 @@ private:
         }
 	return 0;
     }
-};
-
-class Matcher {
-public:
-    Matcher(const char* name, const char* mask) : name(name), mask(mask) {}
-
-    bool match() {
-        if (!try_partial_match())
-            return false;
-
-        while (*mask == '*') {
-            ++mask;
-            while (!try_partial_match() && *name != '\0')
-                ++name;
-        }
-
-        return is_full_match();
-    }
-
-private:
-    bool is_full_match() const { return *name == '\0' && *mask == '\0'; }
-
-    bool patrial_match() {
-        while (*name != '\0' && (*name == *mask || *mask == '?')) {
-            ++name;
-            ++mask;
-        }
-
-        return is_full_match() || *mask == '*';
-    }
-
-    bool try_partial_match() {
-        auto tmp = *this;
-        if (tmp.patrial_match()) {
-            *this = tmp;
-            return true;
-        }
-        return false;
-    }
-
-    const char* name;
-    const char* mask;
 };
 
 class Conveyer {
