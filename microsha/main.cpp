@@ -8,7 +8,6 @@
 #include <fstream>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/prctl.h>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -23,7 +22,7 @@
 
 using namespace std;
 
-//разделение по пробелу и табуляции("" не входят)
+//Г°Г Г§Г¤ГҐГ«ГҐГ­ГЁГҐ ГЇГ® ГЇГ°Г®ГЎГҐГ«Гі ГЁ ГІГ ГЎГіГ«ГїГ¶ГЁГЁ("" Г­ГҐ ГўГµГ®Г¤ГїГІ)
 vector<string> split_space(const string& s) {
 	istringstream ist(s);
 	vector<string> ans;
@@ -34,7 +33,7 @@ vector<string> split_space(const string& s) {
 	}
 	return ans;
 }
-//разделение по string("" могут быть)
+//Г°Г Г§Г¤ГҐГ«ГҐГ­ГЁГҐ ГЇГ® string("" Г¬Г®ГЈГіГІ ГЎГ»ГІГј)
 vector<string> split_by_string(const string& str, const string& delim)
 {
 	vector<string> tokens;
@@ -50,7 +49,7 @@ vector<string> split_by_string(const string& str, const string& delim)
 	while (pos < str.length() && prev < str.length());
 	return tokens;
 }
-//возвращает путь к домашней директории из корневой
+//ГўГ®Г§ГўГ°Г Г№Г ГҐГІ ГЇГіГІГј ГЄ Г¤Г®Г¬Г ГёГ­ГҐГ© Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ ГЁГ§ ГЄГ®Г°Г­ГҐГўГ®Г©
 string get_homedir() {
     const char* dir;
     if ((dir = getenv("HOME")) == NULL) {
@@ -59,14 +58,14 @@ string get_homedir() {
     string ret = dir;
     return ret;
 }
-//возвращает путь к текущей директории(домашняя обозначается как ~)
+//ГўГ®Г§ГўГ°Г Г№Г ГҐГІ ГЇГіГІГј ГЄ ГІГҐГЄГіГ№ГҐГ© Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ(Г¤Г®Г¬Г ГёГ­ГїГї Г®ГЎГ®Г§Г­Г Г·Г ГҐГІГ±Гї ГЄГ ГЄ ~)
 string get_dir() {
     char wd[1000];
     getcwd(wd, sizeof(wd));
     string dir = wd;
     return dir;
 }
-//печать приветственной строки
+//ГЇГҐГ·Г ГІГј ГЇГ°ГЁГўГҐГІГ±ГІГўГҐГ­Г­Г®Г© Г±ГІГ°Г®ГЄГЁ
 void print_hello() {
     string dir = get_dir();
     string hello;
@@ -148,7 +147,7 @@ private:
 
 class Command {
 public:
-    //общий вид: command <(>) file1 >(<) file2 
+    //Г®ГЎГ№ГЁГ© ГўГЁГ¤: command <(>) file1 >(<) file2 
     vector<string> input_args;
     vector<string> command_args;
     string input_name;
@@ -197,7 +196,7 @@ private:
     bool failed = false;
    
     void parsing_input(const string& input) { input_args = split_space(input); }
-    //split команды на command_args, input_name и output_name
+    //split ГЄГ®Г¬Г Г­Г¤Г» Г­Г  command_args, input_name ГЁ output_name
     void command_split() {
         auto in_iter = find(input_args.begin(), input_args.end(), "<");
         auto in_counter = count(input_args.begin(), input_args.end(), "<");
@@ -237,7 +236,7 @@ private:
         }
         return false;
     }
-    //конвертация всех регулярных выражений в строки
+    //ГЄГ®Г­ГўГҐГ°ГІГ Г¶ГЁГї ГўГ±ГҐГµ Г°ГҐГЈГіГ«ГїГ°Г­Г»Гµ ГўГ»Г°Г Г¦ГҐГ­ГЁГ© Гў Г±ГІГ°Г®ГЄГЁ
     void convert_args(vector<string>& args) {
         for (int i = 0; i < args.size(); i++) {
             if (!is_reg_expr(args[i])) {
@@ -251,7 +250,7 @@ private:
             args.insert(args.begin() + i, converted_arg.begin(), converted_arg.end());
         }
     }
-    //на вход подается путь, разделенный по слешу
+    //Г­Г  ГўГµГ®Г¤ ГЇГ®Г¤Г ГҐГІГ±Гї ГЇГіГІГј, Г°Г Г§Г¤ГҐГ«ГҐГ­Г­Г»Г© ГЇГ® Г±Г«ГҐГёГі
     vector<string> convert_reg_expr(vector<string>& args) {
         vector<string> result;
         string path;
@@ -341,7 +340,6 @@ private:
             v.push_back((char*)command_args[i].c_str());
         }
         v.push_back(NULL);
-        prctl(PR_SET_PDEATHSIG, SIGINT); // exit process when parent dies
         execvp(v[0], &v[0]);
         cerr << "Execution error" << endl;
     }
@@ -463,7 +461,7 @@ public:
                 }
             }
             else {
-                //на последней команде закрываем все пайпы и ждем детей
+                //Г­Г  ГЇГ®Г±Г«ГҐГ¤Г­ГҐГ© ГЄГ®Г¬Г Г­Г¤ГҐ Г§Г ГЄГ°Г»ГўГ ГҐГ¬ ГўГ±ГҐ ГЇГ Г©ГЇГ» ГЁ Г¦Г¤ГҐГ¬ Г¤ГҐГІГҐГ©
                 if (i == commands.size() - 1) {
                     for (auto& i : pipes) {
                         if (i[0] != -1) {
