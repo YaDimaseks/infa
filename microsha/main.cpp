@@ -17,7 +17,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <dirent.h>
-#include <wait.h>
+#include <sys/wait.h>
 #include <pthread.h>
 
 using namespace std;
