@@ -1,6 +1,5 @@
 #include <stdio.h>
-#include <csignal>
-#include <signal.h>
+#include <sys/signal.h>
 #include <unistd.h>
 #include <iomanip>  
 #include <fcntl.h>
