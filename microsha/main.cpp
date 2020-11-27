@@ -409,7 +409,7 @@ public:
             getrusage(RUSAGE_CHILDREN, &stop);
             auto real_time_sec = stop_real_time.tv_sec - start_real_time.tv_sec;
             auto real_time_usec = stop_real_time.tv_usec - start_real_time.tv_usec;
-            cerr << "real: " << real_time_sec << "." << setfill('0') << setw(3)
+            cerr << endl << "real: " << real_time_sec << "." << setfill('0') << setw(3)
                 << real_time_usec << endl
                 << "system: " << stop.ru_stime.tv_sec - start.ru_stime.tv_sec << "."
                 << setfill('0') << setw(3)
